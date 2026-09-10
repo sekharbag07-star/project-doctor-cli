@@ -46,13 +46,8 @@ class Doctor {
     effectiveLogger.info('Auditing ${root.path}');
     final results = await _runAnalyzers(
         context, effectiveLogger, context.configuration.maxConcurrentAnalyzers);
-    final reports = context.reportDirectory;
-    await reports.create(recursive: true);
-    final stamp = _stamp(startedAt);
-    final file = File(
-        '${reports.path}${Platform.pathSeparator}project_report_$stamp.txt');
-    await reportBuilder.write(
-        file: file,
+    final file = await reportBuilder.writeToDirectory(
+        directory: context.reportDirectory,
         results: results,
         startedAt: startedAt,
         projectPath: root.absolute.path,
@@ -108,10 +103,5 @@ class Doctor {
           startedAt: started,
           finishedAt: context.clock.now());
     }
-  }
-
-  String _stamp(DateTime time) {
-    String two(int value) => value.toString().padLeft(2, '0');
-    return '${time.year}${two(time.month)}${two(time.day)}_${two(time.hour)}${two(time.minute)}${two(time.second)}';
   }
 }
