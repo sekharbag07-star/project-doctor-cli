@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:io';
 
 import '../core/project_context.dart';
+import 'path_normalizer.dart';
 
 /// Read-only file scanning contract used by analyzers.
 abstract interface class ProjectFileScanner {
@@ -51,18 +52,22 @@ class ScanFilter {
 /// Compiled ignore rules from defaults, configuration, and `.gitignore`.
 class IgnoreMatcher {
   /// Creates a matcher from glob-like [patterns].
-  IgnoreMatcher(Iterable<String> patterns)
-      : _rules = patterns
+  IgnoreMatcher(Iterable<String> patterns,
+      {PathNormalizer normalizer = const DefaultPathNormalizer()})
+      : _normalizer = normalizer,
+        _rules = patterns
+            .map(normalizer.normalize)
             .map(_normalizePattern)
             .where((pattern) => pattern.isNotEmpty)
             .map(_IgnoreRule.new)
             .toList(growable: false);
 
   final List<_IgnoreRule> _rules;
+  final PathNormalizer _normalizer;
 
   /// Returns whether [relativePath] should be ignored.
   bool matches(String relativePath, {bool isDirectory = false}) {
-    final normalized = relativePath.replaceAll('\\', '/');
+    final normalized = _normalizer.normalize(relativePath);
     var ignored = false;
     for (final rule in _rules) {
       if (rule.matches(normalized, isDirectory: isDirectory)) {
@@ -137,8 +142,11 @@ class FileScanner implements ProjectFileScanner {
 
   final Map<String, IgnoreMatcher> _ignoreCache = {};
 
+  /// Normalizer used for relative paths and ignore matching.
+  final PathNormalizer pathNormalizer;
+
   /// Creates a streaming scanner.
-  FileScanner();
+  FileScanner({this.pathNormalizer = const DefaultPathNormalizer()});
 
   /// Creates a scan result whose stream starts traversal on listen.
   ScanResult scanResult(ProjectContext context,
@@ -221,15 +229,18 @@ class FileScanner implements ProjectFileScanner {
     final gitignore =
         File('${context.path}${Platform.pathSeparator}.gitignore');
     if (gitignore.existsSync()) patterns.addAll(gitignore.readAsLinesSync());
-    final matcher = IgnoreMatcher(patterns);
+    final matcher = IgnoreMatcher(patterns, normalizer: pathNormalizer);
     _ignoreCache[key] = matcher;
     return matcher;
   }
 
-  String _relativePath(ProjectContext context, String path) => path
-      .substring(context.path.length)
-      .replaceAll('\\', '/')
-      .replaceFirst(RegExp(r'^/'), '');
+  String _relativePath(ProjectContext context, String path) {
+    final normalizedRoot = pathNormalizer.normalize(context.path);
+    final normalizedPath = pathNormalizer.normalize(path);
+    return normalizedPath
+        .substring(normalizedRoot.length)
+        .replaceFirst(RegExp(r'^/'), '');
+  }
 }
 
 class _IgnoreRule {

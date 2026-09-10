@@ -338,6 +338,16 @@ Future<void> main() async => Future<void>.delayed(const Duration(seconds: 2));
     expect(paths, isNot(contains(endsWith('link.txt'))));
     expect(result.statistics.symbolicLinksSkipped, 1);
   });
+
+  test('path normalizer provides stable cross-platform paths', () {
+    const normalizer = DefaultPathNormalizer();
+    expect(normalizer.normalize(r'C:\workspace\lib\..\test\file.dart'),
+        'C:/workspace/test/file.dart');
+    expect(normalizer.normalize('./lib//main.dart'), 'lib/main.dart');
+    expect(normalizer.normalize('/workspace/./lib/../test'), '/workspace/test');
+    final matcher = IgnoreMatcher(['ignored\\**'], normalizer: normalizer);
+    expect(matcher.matches('ignored/cache/file.txt'), isTrue);
+  });
 }
 
 class _FailingAnalyzer implements Analyzer {

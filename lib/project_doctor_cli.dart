@@ -17,3 +17,4 @@ export 'src/core/logger.dart';
 export 'src/report/report_builder.dart';
 export 'src/report/score_calculator.dart';
 export 'src/services/file_scanner.dart';
+export 'src/services/path_normalizer.dart';
