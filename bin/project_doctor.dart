@@ -10,7 +10,8 @@ import 'package:project_doctor_cli/src/analyzers/generic_analyzers.dart';
 import 'package:project_doctor_cli/src/analyzers/git_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/metrics_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/performance_analyzer.dart';
-import 'package:project_doctor_cli/src/analyzers/quality_analyzer.dart';
+import 'package:project_doctor_cli/src/analyzers/quality_analyzer.dart'
+    as legacy_quality;
 import 'package:project_doctor_cli/src/analyzers/security_analyzer.dart';
 
 /// Parses CLI arguments, runs all configured analyzers, and writes a report.
@@ -98,7 +99,46 @@ Future<void> main(List<String> arguments) async {
       PerformanceAnalyzer.new);
   registry.registerFactory(
       _metadata('quality', 'QUALITY AUDIT', AnalyzerCategory.quality),
+      legacy_quality.QualityAnalyzer.new);
+  registry.registerFactory(
+      _metadata('code-quality', 'CODE QUALITY', AnalyzerCategory.quality),
       QualityAnalyzer.new);
+  registry.registerFactory(
+      _metadata('complexity', 'CODE COMPLEXITY', AnalyzerCategory.quality),
+      ComplexityAnalyzer.new);
+  registry.registerFactory(
+      _metadata('dead-code', 'DEAD CODE', AnalyzerCategory.quality),
+      DeadCodeAnalyzer.new);
+  registry.registerFactory(
+      _metadata('duplicate-code', 'DUPLICATE CODE', AnalyzerCategory.quality),
+      DuplicateCodeAnalyzer.new);
+  registry.registerFactory(
+      _metadata('long-methods', 'LONG METHODS', AnalyzerCategory.quality),
+      LongMethodAnalyzer.new);
+  registry.registerFactory(
+      _metadata('god-classes', 'GOD CLASSES', AnalyzerCategory.quality),
+      GodClassAnalyzer.new);
+  registry.registerFactory(
+      _metadata('solid', 'SOLID DESIGN', AnalyzerCategory.quality),
+      SolidAnalyzer.new);
+  registry.registerFactory(
+      _metadata('style', 'STYLE AND DEBT', AnalyzerCategory.quality),
+      StyleAnalyzer.new);
+  registry.registerFactory(
+      _metadata('flutter-quality', 'FLUTTER QUALITY', AnalyzerCategory.quality),
+      WidgetAnalyzer.new);
+  registry.registerFactory(
+      _metadata('naming', 'NAMING', AnalyzerCategory.quality),
+      NamingAnalyzer.new);
+  registry.registerFactory(
+      _metadata('api-design', 'API DESIGN', AnalyzerCategory.quality),
+      ApiDesignAnalyzer.new);
+  registry.registerFactory(
+      _metadata('documentation', 'DOCUMENTATION', AnalyzerCategory.quality),
+      DocumentationAnalyzer.new);
+  registry.registerFactory(
+      _metadata('maintainability', 'MAINTAINABILITY', AnalyzerCategory.quality),
+      MaintainabilityAnalyzer.new);
   registry.registerFactory(
       _metadata('project-summary', 'PROJECT SUMMARY', AnalyzerCategory.project),
       () =>

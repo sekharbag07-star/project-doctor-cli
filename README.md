@@ -35,7 +35,7 @@ max_concurrent_analyzers: 4
 
 ## Output
 
-Reports are written as `project_report_YYYYMMDD_HHMMSS.txt`. They include a table of contents, execution metadata, analyzer timings, issues with severity and fixes, recommendations, and a final health score.
+Reports are written as `project_report_YYYYMMDD_HHMMSS.txt`. They include a table of contents, execution metadata, analyzer timings, issues with severity and fixes, recommendations, and a final health score. The analyzer suite also audits architecture, imports, dependency cycles, code complexity, duplication, dead code, documentation coverage, API design, and Flutter widget size.
 
 ## Architecture
 
