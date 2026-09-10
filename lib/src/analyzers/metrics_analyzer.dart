@@ -7,10 +7,10 @@ import '../services/file_scanner.dart';
 /// Calculates source size, class, widget, and large-file metrics.
 class MetricsAnalyzer implements Analyzer {
   /// Creates a metrics analyzer backed by [scanner].
-  MetricsAnalyzer(this.scanner);
+  MetricsAnalyzer([this.scanner]);
 
   /// Scanner used to enumerate Dart source files.
-  final FileScanner scanner;
+  final FileScanner? scanner;
 
   /// Report section title for project metrics.
   @override
@@ -22,7 +22,7 @@ class MetricsAnalyzer implements Analyzer {
     var widgets = 0;
     var largeFiles = 0;
     final issues = <Issue>[];
-    for (final file in scanner.dartFiles(context)) {
+    for (final file in context.scanner.dartFiles(context)) {
       final content = file.readAsStringSync();
       final fileLines = content.split('\n').length;
       lines += fileLines;
@@ -48,7 +48,7 @@ class MetricsAnalyzer implements Analyzer {
         summary: 'Source structure and size metrics.',
         issues: issues,
         data: {
-          'Dart files': '${scanner.dartFiles(context).length}',
+          'Dart files': '${context.scanner.dartFiles(context).length}',
           'Lines of code': '$lines',
           'Classes': '$classes',
           'Widgets': '$widgets',

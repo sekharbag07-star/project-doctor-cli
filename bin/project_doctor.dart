@@ -15,7 +15,6 @@ import 'package:project_doctor_cli/src/analyzers/performance_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/quality_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/repository_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/security_analyzer.dart';
-import 'package:project_doctor_cli/src/services/file_scanner.dart';
 
 /// Parses CLI arguments, runs all configured analyzers, and writes a report.
 Future<void> main(List<String> arguments) async {
@@ -42,51 +41,48 @@ Future<void> main(List<String> arguments) async {
     exitCode = 2;
     return;
   }
-  final runner = CommandRunner();
-  final scanner = FileScanner();
   final registry = AnalyzerRegistry();
   registry.registerFactory(
       _metadata('environment', 'ENVIRONMENT', AnalyzerCategory.environment),
-      () => EnvironmentAnalyzer(runner));
+      EnvironmentAnalyzer.new);
   registry.registerFactory(
       _metadata('project-information', 'PROJECT INFORMATION',
           AnalyzerCategory.project),
       ProjectAnalyzer.new);
   registry.registerFactory(
       _metadata('flutter', 'FLUTTER AUDIT', AnalyzerCategory.flutter),
-      () => FlutterAnalyzer(runner));
+      FlutterAnalyzer.new);
   registry.registerFactory(
-      _metadata('dart', 'DART AUDIT', AnalyzerCategory.dart),
-      () => DartAnalyzer(runner));
-  registry.registerFactory(_metadata('git', 'GIT AUDIT', AnalyzerCategory.git),
-      () => GitAnalyzer(runner));
+      _metadata('dart', 'DART AUDIT', AnalyzerCategory.dart), DartAnalyzer.new);
+  registry.registerFactory(
+      _metadata('git', 'GIT AUDIT', AnalyzerCategory.git), GitAnalyzer.new);
   registry.registerFactory(
       _metadata(
           'dependencies', 'DEPENDENCY AUDIT', AnalyzerCategory.dependencies),
-      () => DependencyAnalyzer(runner));
+      DependencyAnalyzer.new);
   registry.registerFactory(
       _metadata(
           'architecture', 'ARCHITECTURE AUDIT', AnalyzerCategory.architecture),
-      () => ArchitectureAnalyzer(scanner));
+      ArchitectureAnalyzer.new);
   registry.registerFactory(
       _metadata('repository', 'REPOSITORY AUDIT', AnalyzerCategory.repository),
-      () => RepositoryAnalyzer(scanner));
+      RepositoryAnalyzer.new);
   registry.registerFactory(
       _metadata('feature', 'FEATURE AUDIT', AnalyzerCategory.feature),
-      () => FeatureAnalyzer(scanner));
+      FeatureAnalyzer.new);
   registry.registerFactory(
       _metadata('metrics', 'METRICS AUDIT', AnalyzerCategory.metrics),
-      () => MetricsAnalyzer(scanner));
+      MetricsAnalyzer.new);
   registry.registerFactory(
       _metadata('security', 'SECURITY AUDIT', AnalyzerCategory.security),
-      () => SecurityAnalyzer(scanner));
+      SecurityAnalyzer.new);
   registry.registerFactory(
       _metadata(
           'performance', 'PERFORMANCE AUDIT', AnalyzerCategory.performance),
-      () => PerformanceAnalyzer(scanner));
+      PerformanceAnalyzer.new);
   registry.registerFactory(
       _metadata('quality', 'QUALITY AUDIT', AnalyzerCategory.quality),
-      () => QualityAnalyzer(scanner));
+      QualityAnalyzer.new);
   registry.registerFactory(
       _metadata('project-summary', 'PROJECT SUMMARY', AnalyzerCategory.project),
       () =>

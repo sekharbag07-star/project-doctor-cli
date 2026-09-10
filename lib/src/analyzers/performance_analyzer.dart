@@ -7,10 +7,10 @@ import '../services/file_scanner.dart';
 /// Checks source files for performance-related patterns.
 class PerformanceAnalyzer implements Analyzer {
   /// Creates a performance analyzer backed by [scanner].
-  PerformanceAnalyzer(this.scanner);
+  PerformanceAnalyzer([this.scanner]);
 
   /// Scanner used to inspect project files.
-  final FileScanner scanner;
+  final FileScanner? scanner;
 
   /// Report section title for performance checks.
   @override
@@ -18,7 +18,7 @@ class PerformanceAnalyzer implements Analyzer {
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async {
     final issues = <Issue>[];
-    for (final file in scanner.dartFiles(context)) {
+    for (final file in context.scanner.dartFiles(context)) {
       final text = file.readAsStringSync();
       if (text.contains('ListView(') && !text.contains('builder:')) {
         issues.add(Issue(

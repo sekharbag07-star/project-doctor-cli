@@ -6,10 +6,10 @@ import '../core/project_context.dart';
 /// Runs the Dart analyzer command in the target project.
 class DartAnalyzer implements Analyzer {
   /// Creates a Dart analyzer using [runner] for process execution.
-  DartAnalyzer(this.runner);
+  DartAnalyzer([this.runner]);
 
   /// Process runner used to invoke `dart analyze`.
-  final CommandRunner runner;
+  final CommandRunner? runner;
 
   /// Report section title for Dart analysis.
   @override
@@ -18,8 +18,8 @@ class DartAnalyzer implements Analyzer {
   /// Executes Dart analysis and captures its output.
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async {
-    final result =
-        await runner.run('dart', ['analyze'], workingDirectory: context.path);
+    final result = await context.commandRunner
+        .run('dart', ['analyze'], workingDirectory: context.path);
     return AnalyzerResult(
         analyzer: name,
         summary: result.succeeded

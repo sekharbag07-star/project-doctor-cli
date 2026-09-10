@@ -1,8 +1,17 @@
 import 'dart:io';
 import '../core/project_context.dart';
 
+/// Read-only file scanning contract used by analyzers.
+abstract interface class ProjectFileScanner {
+  /// Returns Dart source files beneath [context].
+  Iterable<File> dartFiles(ProjectContext context);
+
+  /// Returns all non-ignored files beneath [context].
+  Iterable<File> allFiles(ProjectContext context);
+}
+
 /// Recursively discovers project files while honoring ignore rules.
-class FileScanner {
+class FileScanner implements ProjectFileScanner {
   /// Directory names excluded from every scan by default.
   static const defaultIgnored = {
     '.dart_tool',
@@ -15,10 +24,12 @@ class FileScanner {
   final Map<String, List<File>> _cache = {};
 
   /// Returns cached Dart source files beneath [context].
+  @override
   Iterable<File> dartFiles(ProjectContext context) =>
       _files(context).where((file) => file.path.endsWith('.dart'));
 
   /// Returns all non-ignored files beneath [context].
+  @override
   Iterable<File> allFiles(ProjectContext context) => _files(context);
 
   List<File> _files(ProjectContext context) {

@@ -7,10 +7,10 @@ import '../services/file_scanner.dart';
 /// Scans source files for basic security risks and exposed secrets.
 class SecurityAnalyzer implements Analyzer {
   /// Creates a security analyzer backed by [scanner].
-  SecurityAnalyzer(this.scanner);
+  SecurityAnalyzer([this.scanner]);
 
   /// Scanner used to inspect project files.
-  final FileScanner scanner;
+  final FileScanner? scanner;
 
   /// Report section title for security checks.
   @override
@@ -23,7 +23,7 @@ class SecurityAnalyzer implements Analyzer {
           caseSensitive: false),
       RegExp(r'AIza[0-9A-Za-z_-]{20,}')
     ];
-    for (final file in scanner.allFiles(context).where((file) =>
+    for (final file in context.scanner.allFiles(context).where((file) =>
         file.path.endsWith('.dart') ||
         file.path.endsWith('.yaml') ||
         file.path.endsWith('.json'))) {

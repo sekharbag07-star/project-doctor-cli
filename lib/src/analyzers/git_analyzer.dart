@@ -6,10 +6,10 @@ import '../core/project_context.dart';
 /// Reports Git status, branches, recent history, and diff statistics.
 class GitAnalyzer implements Analyzer {
   /// Creates a Git analyzer using [runner].
-  GitAnalyzer(this.runner);
+  GitAnalyzer([this.runner]);
 
   /// Process runner used to invoke Git commands.
-  final CommandRunner runner;
+  final CommandRunner? runner;
 
   /// Report section title for repository diagnostics.
   @override
@@ -26,8 +26,8 @@ class GitAnalyzer implements Analyzer {
     };
     final data = <String, String>{};
     for (final entry in commands.entries) {
-      final result =
-          await runner.run('git', entry.value, workingDirectory: context.path);
+      final result = await context.commandRunner
+          .run('git', entry.value, workingDirectory: context.path);
       data[entry.key] = result.succeeded
           ? (result.stdout.isEmpty ? 'Clean / none' : result.stdout)
           : 'Unavailable';

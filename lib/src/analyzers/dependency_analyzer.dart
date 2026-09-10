@@ -7,10 +7,10 @@ import '../core/project_context.dart';
 /// Inspects the package manifest and reports outdated dependencies.
 class DependencyAnalyzer implements Analyzer {
   /// Creates a dependency analyzer using [runner].
-  DependencyAnalyzer(this.runner);
+  DependencyAnalyzer([this.runner]);
 
   /// Process runner used to invoke package tooling.
-  final CommandRunner runner;
+  final CommandRunner? runner;
 
   /// Report section title for dependency analysis.
   @override
@@ -28,8 +28,8 @@ class DependencyAnalyzer implements Analyzer {
     final dependencies = lines
         .where((line) => line.startsWith('  ') && line.trim().contains(':'))
         .length;
-    final outdated = await runner.run('flutter', ['pub', 'outdated'],
-        workingDirectory: context.path);
+    final outdated = await context.commandRunner
+        .run('flutter', ['pub', 'outdated'], workingDirectory: context.path);
     return AnalyzerResult(
         analyzer: name,
         summary: 'Package manifest inspection.',

@@ -7,10 +7,10 @@ import '../services/file_scanner.dart';
 /// Checks that presentation code does not depend directly on data code.
 class ArchitectureAnalyzer implements Analyzer {
   /// Creates an architecture analyzer backed by [scanner].
-  ArchitectureAnalyzer(this.scanner);
+  ArchitectureAnalyzer([this.scanner]);
 
   /// Scanner used to inspect Dart source files.
-  final FileScanner scanner;
+  final FileScanner? scanner;
 
   /// Report section title for the architecture audit.
   @override
@@ -20,7 +20,7 @@ class ArchitectureAnalyzer implements Analyzer {
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async {
     final issues = <Issue>[];
-    for (final file in scanner.dartFiles(context)) {
+    for (final file in context.scanner.dartFiles(context)) {
       final text = file.readAsStringSync();
       final normalized = file.path.replaceAll('\\', '/');
       if (normalized.contains('/presentation/') && text.contains('/data/')) {

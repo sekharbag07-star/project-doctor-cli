@@ -3,19 +3,24 @@ import 'analyzers/analyzer.dart';
 import 'analyzers/analyzer_result.dart';
 import 'analyzers/analyzer_registry.dart';
 import 'core/project_context.dart';
-import 'core/configuration.dart';
-import 'core/logger.dart';
 import 'core/command_runner.dart';
+import 'core/logger.dart';
 import 'report/report_builder.dart';
+import 'core/project_context_factory.dart';
+import 'core/service_interfaces.dart';
 
 /// Coordinates analyzers and writes a complete project audit report.
 class Doctor {
   /// Creates an audit coordinator with [analyzers] and [reportBuilder].
-  Doctor(this.analyzers, this.reportBuilder);
+  Doctor(this.analyzers, this.reportBuilder,
+      {ProjectContextFactory? contextFactory})
+      : contextFactory = contextFactory ?? const ProjectContextFactory();
 
   /// Creates an audit coordinator from lazily registered analyzers.
-  Doctor.fromRegistry(AnalyzerRegistry registry, this.reportBuilder)
-      : analyzers = registry.analyzers.toList(growable: false);
+  Doctor.fromRegistry(AnalyzerRegistry registry, this.reportBuilder,
+      {ProjectContextFactory? contextFactory})
+      : analyzers = registry.analyzers.toList(growable: false),
+        contextFactory = contextFactory ?? const ProjectContextFactory();
 
   /// Ordered analyzers executed for each project.
   final List<Analyzer> analyzers;
@@ -23,24 +28,25 @@ class Doctor {
   /// Report writer used for the final text output.
   final ReportBuilder reportBuilder;
 
+  /// Factory used to create the shared execution context.
+  final ProjectContextFactory contextFactory;
+
   /// Audits [root] and returns the generated report file.
   Future<File> run(Directory root,
       {Directory? outputDirectory,
       String version = '1.0.0',
       Logger? logger,
       CommandRunner? commandRunner}) async {
-    final startedAt = DateTime.now();
-    final runner = commandRunner ?? CommandRunner();
-    final context = ProjectContext(
-        root: root,
-        configuration: DoctorConfiguration.load(root),
-        commandRunner: runner);
-    final effectiveLogger = logger ?? Logger();
+    final context = await contextFactory.create(root,
+        logger: logger,
+        commandRunner: commandRunner,
+        reportDirectory: outputDirectory);
+    final startedAt = context.clock.now();
+    final effectiveLogger = context.logger;
     effectiveLogger.info('Auditing ${root.path}');
     final results = await _runAnalyzers(
         context, effectiveLogger, context.configuration.maxConcurrentAnalyzers);
-    final reports = outputDirectory ??
-        Directory('${root.path}${Platform.pathSeparator}reports');
+    final reports = context.reportDirectory;
     await reports.create(recursive: true);
     final stamp = _stamp(startedAt);
     final file = File(
@@ -56,8 +62,8 @@ class Doctor {
     return file;
   }
 
-  Future<List<AnalyzerResult>> _runAnalyzers(
-      ProjectContext context, Logger logger, int maximumConcurrency) async {
+  Future<List<AnalyzerResult>> _runAnalyzers(ProjectContext context,
+      LoggerService logger, int maximumConcurrency) async {
     if (analyzers.isEmpty) return const [];
     final results = List<AnalyzerResult?>.filled(analyzers.length, null);
     var nextIndex = 0;
@@ -76,8 +82,8 @@ class Doctor {
   }
 
   Future<AnalyzerResult> _runAnalyzer(
-      Analyzer analyzer, ProjectContext context, Logger logger) async {
-    final started = DateTime.now();
+      Analyzer analyzer, ProjectContext context, LoggerService logger) async {
+    final started = context.clock.now();
     logger.debug('Starting ${analyzer.name}');
     try {
       final result = await analyzer.analyze(context);
@@ -87,20 +93,20 @@ class Doctor {
           issues: result.issues,
           data: result.data,
           failed: result.failed,
-          duration: DateTime.now().difference(started),
+          duration: context.clock.now().difference(started),
           failureDetails: result.failureDetails,
           startedAt: started,
-          finishedAt: DateTime.now());
+          finishedAt: context.clock.now());
     } catch (error, stackTrace) {
       logger.warning('${analyzer.name} failed; continuing.');
       return AnalyzerResult(
           analyzer: analyzer.name,
           summary: 'Analyzer failed: $error',
           failed: true,
-          duration: DateTime.now().difference(started),
+          duration: context.clock.now().difference(started),
           failureDetails: '$error\n$stackTrace',
           startedAt: started,
-          finishedAt: DateTime.now());
+          finishedAt: context.clock.now());
     }
   }
 

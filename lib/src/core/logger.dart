@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'service_interfaces.dart';
 
 /// Categories supported by the project doctor's logger.
 enum LogLevel {
@@ -19,7 +20,7 @@ enum LogLevel {
 }
 
 /// Writes consistently formatted messages to the terminal.
-class Logger {
+class Logger implements LoggerService {
   /// Creates a logger with optional verbosity and quiet-mode controls.
   Logger({this.verbose = false, this.quiet = false, this.noColor = false});
 
@@ -55,22 +56,27 @@ class Logger {
   }
 
   /// Writes a trace message when verbose logging is enabled.
+  @override
   void trace(String message) => _write(LogLevel.trace, message);
 
   /// Writes an informational message to standard output.
+  @override
   void info(String message) {
     _write(LogLevel.info, message);
   }
 
   /// Writes a warning message to standard error.
+  @override
   void warning(String message) {
     _write(LogLevel.warning, message);
   }
 
   /// Writes an error message to standard error.
+  @override
   void error(String message) => _write(LogLevel.error, message);
 
   /// Writes a debug message when verbose logging is enabled.
+  @override
   void debug(String message) {
     _write(LogLevel.debug, message);
   }

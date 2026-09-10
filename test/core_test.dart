@@ -186,6 +186,88 @@ Future<void> main() async => Future<void>.delayed(const Duration(seconds: 2));
     final contents = report.readAsStringSync();
     expect(contents.indexOf('First'), lessThan(contents.indexOf('Second')));
   });
+
+  test('project type detection distinguishes Flutter, Dart, and unknown',
+      () async {
+    final flutter =
+        await Directory.systemTemp.createTemp('project_doctor_flutter');
+    final dart = await Directory.systemTemp.createTemp('project_doctor_dart');
+    final unknown =
+        await Directory.systemTemp.createTemp('project_doctor_unknown');
+    addTearDown(() async {
+      await flutter.delete(recursive: true);
+      await dart.delete(recursive: true);
+      await unknown.delete(recursive: true);
+    });
+    await File('${flutter.path}/pubspec.yaml')
+        .writeAsString('dependencies:\n  flutter:\n    sdk: flutter\n');
+    await File('${dart.path}/pubspec.yaml').writeAsString('name: sample\n');
+    expect(detectProjectType(flutter), ProjectType.flutter);
+    expect(detectProjectType(dart), ProjectType.dart);
+    expect(detectProjectType(unknown), ProjectType.unknown);
+  });
+
+  test('context factory injects shared services and loads configuration',
+      () async {
+    final root =
+        await Directory.systemTemp.createTemp('project_doctor_context');
+    addTearDown(() => root.delete(recursive: true));
+    await File('${root.path}/pubspec.yaml')
+        .writeAsString('name: context_test\n');
+    await File('${root.path}/.project_doctor.yaml')
+        .writeAsString('max_concurrent_analyzers: 2\n');
+    final logger = _TestLogger();
+    final scanner = FileScanner();
+    final cache = MemoryCacheManager();
+    final clock = _FixedClock(DateTime.utc(2026, 1, 1));
+    final context = await ProjectContextFactory(
+      environmentProvider: _TestEnvironmentProvider(),
+      gitProvider: _TestGitProvider(),
+      sdkProvider: _TestSdkProvider(),
+      projectInfoProvider: _TestProjectInfoProvider(),
+    ).create(root,
+        logger: logger, scanner: scanner, cache: cache, clock: clock);
+    expect(context.logger, same(logger));
+    expect(context.scanner, same(scanner));
+    expect(context.cache, same(cache));
+    expect(context.clock, same(clock));
+    expect(context.configuration.maxConcurrentAnalyzers, 2);
+    expect(context.workingDirectory.path, root.path);
+    expect(context.projectType, ProjectType.dart);
+    expect(context.environment.tools['dart'], 'test');
+  });
+
+  test('Doctor passes the same context instance to every analyzer', () async {
+    final root =
+        await Directory.systemTemp.createTemp('project_doctor_shared_context');
+    addTearDown(() => root.delete(recursive: true));
+    final first = _ContextAnalyzer();
+    final second = _ContextAnalyzer();
+    final factory = ProjectContextFactory(
+      environmentProvider: _TestEnvironmentProvider(),
+      gitProvider: _TestGitProvider(),
+      sdkProvider: _TestSdkProvider(),
+      projectInfoProvider: _TestProjectInfoProvider(),
+    );
+    await Doctor([first, second], ReportBuilder(ScoreCalculator()),
+            contextFactory: factory)
+        .run(root);
+    expect(first.context, same(second.context));
+  });
+
+  test('context information collections are immutable', () {
+    final environment = EnvironmentInfo({'dart': 'test'});
+    final metadata = AnalyzerMetadata(
+      id: 'test',
+      displayName: 'Test',
+      description: 'Test metadata.',
+      category: AnalyzerCategory.other,
+      supportedProjectTypes: const [ProjectType.dart],
+    );
+    expect(() => environment.tools['dart'] = 'changed', throwsUnsupportedError);
+    expect(() => metadata.supportedProjectTypes.add(ProjectType.flutter),
+        throwsUnsupportedError);
+  });
 }
 
 class _FailingAnalyzer implements Analyzer {
@@ -223,4 +305,67 @@ class _NamedAnalyzer implements Analyzer {
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async =>
       AnalyzerResult(analyzer: name, summary: 'ok');
+}
+
+class _ContextAnalyzer implements Analyzer {
+  ProjectContext? context;
+
+  @override
+  String get name => 'Context';
+
+  @override
+  Future<AnalyzerResult> analyze(ProjectContext context) async {
+    this.context = context;
+    return const AnalyzerResult(analyzer: 'Context', summary: 'ok');
+  }
+}
+
+class _TestEnvironmentProvider implements EnvironmentProvider {
+  @override
+  Future<EnvironmentInfo> load(Directory root, CommandRunner runner) async =>
+      EnvironmentInfo({'dart': 'test'});
+}
+
+class _TestGitProvider implements GitProvider {
+  @override
+  Future<GitInfo> load(Directory root, CommandRunner runner) async =>
+      const GitInfo(available: true, branch: 'test');
+}
+
+class _TestSdkProvider implements SdkProvider {
+  @override
+  Future<SdkInfo> load(Directory root, CommandRunner runner) async =>
+      const SdkInfo(dartVersion: 'test');
+}
+
+class _TestProjectInfoProvider implements ProjectInfoProvider {
+  @override
+  Future<ProjectInfo> load(Directory root) async =>
+      const ProjectInfo(name: 'test');
+}
+
+class _FixedClock implements Clock {
+  _FixedClock(this.value);
+
+  final DateTime value;
+
+  @override
+  DateTime now() => value;
+}
+
+class _TestLogger implements LoggerService {
+  @override
+  void debug(String message) {}
+
+  @override
+  void error(String message) {}
+
+  @override
+  void info(String message) {}
+
+  @override
+  void trace(String message) {}
+
+  @override
+  void warning(String message) {}
 }

@@ -7,10 +7,10 @@ import '../services/file_scanner.dart';
 /// Checks source quality thresholds and maintainability concerns.
 class QualityAnalyzer implements Analyzer {
   /// Creates a quality analyzer backed by [scanner].
-  QualityAnalyzer(this.scanner);
+  QualityAnalyzer([this.scanner]);
 
   /// Scanner used to inspect source files.
-  final FileScanner scanner;
+  final FileScanner? scanner;
 
   /// Report section title for quality checks.
   @override
@@ -29,7 +29,7 @@ class QualityAnalyzer implements Analyzer {
     };
     final assets = <String, String>{};
     final issues = <Issue>[];
-    for (final file in scanner.allFiles(context)) {
+    for (final file in context.scanner.allFiles(context)) {
       final text = file.readAsStringSync();
       for (final key in counts.keys) {
         counts[key] = counts[key]! + key.allMatches(text).length;
