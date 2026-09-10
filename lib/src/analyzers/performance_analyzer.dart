@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'analyzer.dart';
 import 'analyzer_result.dart';
 import 'issue.dart';
@@ -18,7 +20,10 @@ class PerformanceAnalyzer implements Analyzer {
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async {
     final issues = <Issue>[];
-    for (final file in context.scanner.dartFiles(context)) {
+    await for (final entity in context.scanner
+        .scan(context, filter: const ScanFilter(extensions: {'.dart'}))) {
+      if (entity is! File) continue;
+      final file = entity;
       final text = file.readAsStringSync();
       if (text.contains('ListView(') && !text.contains('builder:')) {
         issues.add(Issue(

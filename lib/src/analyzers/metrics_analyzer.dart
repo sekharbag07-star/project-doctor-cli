@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'analyzer.dart';
 import 'analyzer_result.dart';
 import 'issue.dart';
@@ -21,8 +23,13 @@ class MetricsAnalyzer implements Analyzer {
     var classes = 0;
     var widgets = 0;
     var largeFiles = 0;
+    var files = 0;
     final issues = <Issue>[];
-    for (final file in context.scanner.dartFiles(context)) {
+    await for (final entity in context.scanner
+        .scan(context, filter: const ScanFilter(extensions: {'.dart'}))) {
+      if (entity is! File) continue;
+      final file = entity;
+      files++;
       final content = file.readAsStringSync();
       final fileLines = content.split('\n').length;
       lines += fileLines;
@@ -48,7 +55,7 @@ class MetricsAnalyzer implements Analyzer {
         summary: 'Source structure and size metrics.',
         issues: issues,
         data: {
-          'Dart files': '${context.scanner.dartFiles(context).length}',
+          'Dart files': '$files',
           'Lines of code': '$lines',
           'Classes': '$classes',
           'Widgets': '$widgets',

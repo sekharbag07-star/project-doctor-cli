@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'analyzer.dart';
 import 'analyzer_result.dart';
 import 'issue.dart';
@@ -23,10 +25,10 @@ class SecurityAnalyzer implements Analyzer {
           caseSensitive: false),
       RegExp(r'AIza[0-9A-Za-z_-]{20,}')
     ];
-    for (final file in context.scanner.allFiles(context).where((file) =>
-        file.path.endsWith('.dart') ||
-        file.path.endsWith('.yaml') ||
-        file.path.endsWith('.json'))) {
+    await for (final entity in context.scanner.scan(context,
+        filter: const ScanFilter(extensions: {'.dart', '.yaml', '.json'}))) {
+      if (entity is! File) continue;
+      final file = entity;
       final text = file.readAsStringSync();
       if (patterns.any((pattern) => pattern.hasMatch(text))) {
         issues.add(Issue(

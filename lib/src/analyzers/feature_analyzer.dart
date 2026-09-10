@@ -19,7 +19,11 @@ class FeatureAnalyzer implements Analyzer {
   /// Measures the project's high-level feature layout.
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async {
-    final files = context.scanner.dartFiles(context).length;
+    var files = 0;
+    await for (final entity in context.scanner
+        .scan(context, filter: const ScanFilter(extensions: {'.dart'}))) {
+      if (entity is File) files++;
+    }
     final featureDirectories =
         context.children(relativePath: 'lib').whereType<Directory>().length;
     return AnalyzerResult(

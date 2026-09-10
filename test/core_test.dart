@@ -268,6 +268,76 @@ Future<void> main() async => Future<void>.delayed(const Duration(seconds: 2));
     expect(() => metadata.supportedProjectTypes.add(ProjectType.flutter),
         throwsUnsupportedError);
   });
+
+  test('scanner streams files with ignore and extension filters', () async {
+    final root = await Directory.systemTemp.createTemp('project_doctor_scan');
+    addTearDown(() => root.delete(recursive: true));
+    await Directory('${root.path}/lib').create();
+    await Directory('${root.path}/ignored').create();
+    await Directory('${root.path}/.hidden').create();
+    await File('${root.path}/.gitignore').writeAsString('ignored/\n');
+    await File('${root.path}/.project_doctor.yaml')
+        .writeAsString('ignore:\n  - config_skip/**\n');
+    await File('${root.path}/lib/main.dart').writeAsString('void main() {}');
+    await File('${root.path}/lib/readme.txt').writeAsString('text');
+    await File('${root.path}/ignored/skip.dart').writeAsString('skip');
+    await File('${root.path}/.hidden/secret.dart').writeAsString('hidden');
+    final configSkip = await Directory('${root.path}/config_skip').create();
+    await File('${configSkip.path}/skip.dart').writeAsString('skip');
+
+    final context = ProjectContext(
+        root: root, configuration: DoctorConfiguration.load(root));
+    final scanner = FileScanner();
+    final result = scanner.scanResult(context,
+        filter: const ScanFilter(extensions: {'.dart'}, includeHidden: false));
+    final entities = await result.stream.toList();
+    final paths = entities.map((entity) => entity.path).toList();
+    expect(paths, contains(endsWith('main.dart')));
+    expect(paths, isNot(contains(endsWith('readme.txt'))));
+    expect(paths, isNot(contains(endsWith('skip.dart'))));
+    expect(result.statistics.filesEmitted, 1);
+    expect(result.statistics.directoriesVisited, greaterThanOrEqualTo(2));
+  });
+
+  test('scanner reports progress and handles cancellation', () async {
+    final root =
+        await Directory.systemTemp.createTemp('project_doctor_scan_progress');
+    addTearDown(() => root.delete(recursive: true));
+    for (var index = 0; index < 100; index++) {
+      await File('${root.path}/file_$index.txt').writeAsString('$index');
+    }
+    final token = _TestCancellationToken();
+    final context = ProjectContext(root: root, cancellationToken: token);
+    final progress = <String>[];
+    final scanner = FileScanner();
+    final result =
+        scanner.scanResult(context, onProgress: (entity, statistics) {
+      progress.add(entity.path);
+      if (progress.length == 3) token.cancel();
+    });
+    await result.stream.toList();
+    expect(progress.length, 3);
+    expect(result.statistics.filesEmitted, 3);
+  });
+
+  test('scanner skips symbolic links when supported', () async {
+    final root =
+        await Directory.systemTemp.createTemp('project_doctor_scan_link');
+    addTearDown(() => root.delete(recursive: true));
+    final target =
+        await File('${root.path}/target.txt').writeAsString('target');
+    final link = Link('${root.path}/link.txt');
+    try {
+      await link.create(target.path);
+    } on FileSystemException {
+      return;
+    }
+    final result = FileScanner().scanResult(ProjectContext(root: root));
+    final paths = (await result.stream.toList()).map((entity) => entity.path);
+    expect(paths, contains(endsWith('target.txt')));
+    expect(paths, isNot(contains(endsWith('link.txt'))));
+    expect(result.statistics.symbolicLinksSkipped, 1);
+  });
 }
 
 class _FailingAnalyzer implements Analyzer {
@@ -368,4 +438,13 @@ class _TestLogger implements LoggerService {
 
   @override
   void warning(String message) {}
+}
+
+class _TestCancellationToken implements CancellationToken {
+  bool _cancelled = false;
+
+  void cancel() => _cancelled = true;
+
+  @override
+  bool get isCancelled => _cancelled;
 }

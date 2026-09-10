@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'analyzer.dart';
 import 'analyzer_result.dart';
 import 'issue.dart';
@@ -29,7 +31,9 @@ class QualityAnalyzer implements Analyzer {
     };
     final assets = <String, String>{};
     final issues = <Issue>[];
-    for (final file in context.scanner.allFiles(context)) {
+    await for (final entity in context.scanner.scan(context)) {
+      if (entity is! File) continue;
+      final file = entity;
       final text = file.readAsStringSync();
       for (final key in counts.keys) {
         counts[key] = counts[key]! + key.allMatches(text).length;
