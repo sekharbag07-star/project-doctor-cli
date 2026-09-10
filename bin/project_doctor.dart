@@ -2,18 +2,15 @@
 
 import 'dart:io';
 import 'package:project_doctor_cli/project_doctor_cli.dart';
-import 'package:project_doctor_cli/src/analyzers/architecture_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/dart_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/dependency_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/environment_analyzer.dart';
-import 'package:project_doctor_cli/src/analyzers/feature_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/flutter_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/generic_analyzers.dart';
 import 'package:project_doctor_cli/src/analyzers/git_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/metrics_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/performance_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/quality_analyzer.dart';
-import 'package:project_doctor_cli/src/analyzers/repository_analyzer.dart';
 import 'package:project_doctor_cli/src/analyzers/security_analyzer.dart';
 
 /// Parses CLI arguments, runs all configured analyzers, and writes a report.
@@ -70,6 +67,25 @@ Future<void> main(List<String> arguments) async {
   registry.registerFactory(
       _metadata('feature', 'FEATURE AUDIT', AnalyzerCategory.feature),
       FeatureAnalyzer.new);
+  registry.registerFactory(
+      _metadata('imports', 'IMPORT ANALYSIS', AnalyzerCategory.architecture),
+      ImportAnalyzer.new);
+  registry.registerFactory(
+      _metadata('layer-violations', 'LAYER VIOLATIONS',
+          AnalyzerCategory.architecture),
+      LayerViolationAnalyzer.new);
+  registry.registerFactory(
+      _metadata('circular-dependencies', 'CIRCULAR DEPENDENCIES',
+          AnalyzerCategory.architecture),
+      CircularDependencyAnalyzer.new);
+  registry.registerFactory(
+      _metadata('dependency-graph', 'DEPENDENCY GRAPH',
+          AnalyzerCategory.architecture),
+      DependencyGraphAnalyzer.new);
+  registry.registerFactory(
+      _metadata('project-structure', 'PROJECT STRUCTURE',
+          AnalyzerCategory.projectStructure),
+      ProjectStructureAnalyzer.new);
   registry.registerFactory(
       _metadata('metrics', 'METRICS AUDIT', AnalyzerCategory.metrics),
       MetricsAnalyzer.new);

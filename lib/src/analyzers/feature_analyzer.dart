@@ -1,37 +1,52 @@
-import 'dart:io';
 import 'analyzer.dart';
 import 'analyzer_result.dart';
+import 'architecture_analysis_support.dart';
+import 'finding.dart';
+import 'issue.dart';
+import 'source_inventory.dart';
 import '../core/project_context.dart';
-import '../services/file_scanner.dart';
 
-/// Summarizes Dart files and top-level feature directories.
+/// Discovers feature boundaries and reports oversized features.
 class FeatureAnalyzer implements Analyzer {
-  /// Creates a feature analyzer backed by [scanner].
-  FeatureAnalyzer([this.scanner]);
+  /// Creates a feature analyzer.
+  FeatureAnalyzer([Object? legacyScanner]);
 
-  /// Scanner used to count Dart files.
-  final FileScanner? scanner;
-
-  /// Report section title for feature organization.
   @override
   String get name => 'FEATURE AUDIT';
 
-  /// Measures the project's high-level feature layout.
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async {
-    var files = 0;
-    await for (final entity in context.scanner
-        .scan(context, filter: const ScanFilter(extensions: {'.dart'}))) {
-      if (entity is File) files++;
+    final counts = <String, int>{};
+    final filesByFeature = <String, List<String>>{};
+    final inventory = await loadSourceInventory(context);
+    for (final path in inventory.contents.keys) {
+      final feature = featureOf(path);
+      if (feature != null) {
+        counts[feature] = (counts[feature] ?? 0) + 1;
+        (filesByFeature[feature] ??= []).add(path);
+      }
     }
-    final featureDirectories =
-        context.children(relativePath: 'lib').whereType<Directory>().length;
-    return AnalyzerResult(
-        analyzer: name,
-        summary: 'Feature organization overview.',
+    final findings = <Finding>[];
+    for (final entry in counts.entries.where((entry) => entry.value > 100)) {
+      findings.add(Finding(
+        id: 'feature.too-large-${entry.key}',
+        title: 'Feature is oversized',
+        description: 'Feature ${entry.key} contains ${entry.value} Dart files.',
+        severity: Severity.medium,
+        category: 'feature',
+        priority: FindingPriority.normal,
+        affectedFiles: filesByFeature[entry.key]!,
+        recommendation: 'Split the feature into smaller isolated sub-features.',
+      ));
+    }
+    return findingResult(
+        name, 'Feature discovery and boundary checks.', findings,
         data: {
-          'Dart files': '$files',
-          'Top-level lib directories': '$featureDirectories'
+          'Features': '${counts.length}',
+          ...{
+            for (final entry in counts.entries)
+              entry.key: '${entry.value} files'
+          }
         });
   }
 }

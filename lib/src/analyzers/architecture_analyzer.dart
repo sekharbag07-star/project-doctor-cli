@@ -1,48 +1,52 @@
-import 'dart:io';
-
 import 'analyzer.dart';
 import 'analyzer_result.dart';
+import 'architecture_analysis_support.dart';
+import 'finding.dart';
 import 'issue.dart';
+import 'source_inventory.dart';
 import '../core/project_context.dart';
-import '../services/file_scanner.dart';
 
-/// Checks that presentation code does not depend directly on data code.
+/// Validates conventional Clean Architecture layer structure.
 class ArchitectureAnalyzer implements Analyzer {
-  /// Creates an architecture analyzer backed by [scanner].
-  ArchitectureAnalyzer([this.scanner]);
+  /// Creates an architecture analyzer.
+  ArchitectureAnalyzer([Object? legacyScanner]);
 
-  /// Scanner used to inspect Dart source files.
-  final FileScanner? scanner;
-
-  /// Report section title for the architecture audit.
   @override
   String get name => 'ARCHITECTURE AUDIT';
 
-  /// Runs the presentation-to-data dependency check.
   @override
   Future<AnalyzerResult> analyze(ProjectContext context) async {
-    final issues = <Issue>[];
-    await for (final entity in context.scanner
-        .scan(context, filter: const ScanFilter(extensions: {'.dart'}))) {
-      if (entity is! File) continue;
-      final file = entity;
-      final text = file.readAsStringSync();
-      final normalized = file.path.replaceAll('\\', '/');
-      if (normalized.contains('/presentation/') && text.contains('/data/')) {
-        issues.add(Issue(
-            severity: Severity.high,
-            problem: 'Presentation layer imports data layer.',
-            reason:
-                'This couples UI code to infrastructure and weakens dependency direction.',
-            files: [normalized],
-            recommendedFix:
-                'Depend on domain abstractions and inject data implementations.',
-            priority: 'Immediate'));
+    final findings = <Finding>[];
+    final layerCounts = <String, int>{};
+    final inventory = await loadSourceInventory(context);
+    for (final path in inventory.contents.keys) {
+      final layer = layerOf(path);
+      if (layer != null) layerCounts[layer] = (layerCounts[layer] ?? 0) + 1;
+    }
+    for (final layer in [
+      'domain',
+      'application',
+      'infrastructure',
+      'presentation',
+    ]) {
+      if (!layerCounts.containsKey(layer)) {
+        findings.add(Finding(
+          id: 'architecture.missing-$layer',
+          title: 'Missing $layer layer',
+          description:
+              'The project does not contain a conventional $layer layer.',
+          severity: Severity.medium,
+          category: 'architecture',
+          priority: FindingPriority.normal,
+          affectedFiles: const [],
+          recommendation:
+              'Create the $layer layer when the project requires it.',
+        ));
       }
     }
-    return AnalyzerResult(
-        analyzer: name,
-        summary: 'Layer import direction checks.',
-        issues: issues);
+    return findingResult(
+        name, 'Clean Architecture layer validation.', findings, data: {
+      for (final entry in layerCounts.entries) entry.key: '${entry.value} files'
+    });
   }
 }
