@@ -8,7 +8,7 @@ import 'logger.dart';
 import 'service_interfaces.dart';
 
 /// Immutable dependency container shared by every analyzer in one audit.
-class ProjectContext {
+final class ProjectContext {
   /// Creates a context while preserving the original constructor parameters.
   ProjectContext({
     required this.root,
