@@ -118,6 +118,74 @@ Future<void> main() async => Future<void>.delayed(const Duration(seconds: 2));
     ]);
     expect(score, 93);
   });
+
+  test('registry lazily creates analyzers and exposes metadata', () {
+    var creations = 0;
+    final registry = AnalyzerRegistry();
+    registry.registerFactory(
+      AnalyzerMetadata(
+        id: 'lazy',
+        displayName: 'Lazy',
+        description: 'A lazy analyzer.',
+        category: AnalyzerCategory.other,
+        supportedProjectTypes: const [ProjectType.dart],
+        estimatedDuration: const Duration(seconds: 1),
+        enabledByDefault: false,
+      ),
+      () {
+        creations++;
+        return _DelayedAnalyzer(() {}, () {});
+      },
+    );
+    expect(creations, 0);
+    expect(registry.find('lazy')!.metadata.enabledByDefault, isFalse);
+    expect(registry.find('lazy')!.metadata.supportedProjectTypes,
+        [ProjectType.dart]);
+    expect(registry.analyzers.toList(), hasLength(1));
+    expect(creations, 1);
+  });
+
+  test('legacy registry registration receives fallback metadata', () {
+    final registry = AnalyzerRegistry();
+    registry.register(_FailingAnalyzer());
+    final metadata = registry.registrations.single.metadata;
+    expect(metadata.id, 'failure');
+    expect(metadata.displayName, 'Failure');
+    expect(metadata.category, AnalyzerCategory.other);
+    expect(metadata.enabledByDefault, isTrue);
+  });
+
+  test('Doctor.fromRegistry preserves registry analyzer order', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('project_doctor_registry');
+    addTearDown(() => directory.delete(recursive: true));
+    final registry = AnalyzerRegistry();
+    registry.registerFactory(
+      AnalyzerMetadata(
+        id: 'first',
+        displayName: 'First',
+        description: 'First analyzer.',
+        category: AnalyzerCategory.other,
+        supportedProjectTypes: const [ProjectType.dart],
+      ),
+      () => _NamedAnalyzer('First'),
+    );
+    registry.registerFactory(
+      AnalyzerMetadata(
+        id: 'second',
+        displayName: 'Second',
+        description: 'Second analyzer.',
+        category: AnalyzerCategory.other,
+        supportedProjectTypes: const [ProjectType.dart],
+      ),
+      () => _NamedAnalyzer('Second'),
+    );
+    final report =
+        await Doctor.fromRegistry(registry, ReportBuilder(ScoreCalculator()))
+            .run(directory);
+    final contents = report.readAsStringSync();
+    expect(contents.indexOf('First'), lessThan(contents.indexOf('Second')));
+  });
 }
 
 class _FailingAnalyzer implements Analyzer {
@@ -144,4 +212,15 @@ class _DelayedAnalyzer implements Analyzer {
     onFinish();
     return const AnalyzerResult(analyzer: 'Delayed', summary: 'ok');
   }
+}
+
+class _NamedAnalyzer implements Analyzer {
+  _NamedAnalyzer(this.name);
+
+  @override
+  final String name;
+
+  @override
+  Future<AnalyzerResult> analyze(ProjectContext context) async =>
+      AnalyzerResult(analyzer: name, summary: 'ok');
 }

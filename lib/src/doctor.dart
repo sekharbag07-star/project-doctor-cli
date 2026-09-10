@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'analyzers/analyzer.dart';
 import 'analyzers/analyzer_result.dart';
+import 'analyzers/analyzer_registry.dart';
 import 'core/project_context.dart';
 import 'core/configuration.dart';
 import 'core/logger.dart';
@@ -11,6 +12,10 @@ import 'report/report_builder.dart';
 class Doctor {
   /// Creates an audit coordinator with [analyzers] and [reportBuilder].
   Doctor(this.analyzers, this.reportBuilder);
+
+  /// Creates an audit coordinator from lazily registered analyzers.
+  Doctor.fromRegistry(AnalyzerRegistry registry, this.reportBuilder)
+      : analyzers = registry.analyzers.toList(growable: false);
 
   /// Ordered analyzers executed for each project.
   final List<Analyzer> analyzers;

@@ -44,39 +44,84 @@ Future<void> main(List<String> arguments) async {
   }
   final runner = CommandRunner();
   final scanner = FileScanner();
-  final analyzers = <Analyzer>[
-    EnvironmentAnalyzer(runner),
-    ProjectAnalyzer(),
-    FlutterAnalyzer(runner),
-    DartAnalyzer(runner),
-    GitAnalyzer(runner),
-    DependencyAnalyzer(runner),
-    ArchitectureAnalyzer(scanner),
-    RepositoryAnalyzer(scanner),
-    FeatureAnalyzer(scanner),
-    MetricsAnalyzer(scanner),
-    SecurityAnalyzer(scanner),
-    PerformanceAnalyzer(scanner),
-    QualityAnalyzer(scanner),
-    SectionAnalyzer('PROJECT SUMMARY', 'Project health audit summary.'),
-    SectionAnalyzer(
-        'RECOMMENDATIONS', 'Recommendations are listed from detected issues.'),
-  ];
+  final registry = AnalyzerRegistry();
+  registry.registerFactory(
+      _metadata('environment', 'ENVIRONMENT', AnalyzerCategory.environment),
+      () => EnvironmentAnalyzer(runner));
+  registry.registerFactory(
+      _metadata('project-information', 'PROJECT INFORMATION',
+          AnalyzerCategory.project),
+      ProjectAnalyzer.new);
+  registry.registerFactory(
+      _metadata('flutter', 'FLUTTER AUDIT', AnalyzerCategory.flutter),
+      () => FlutterAnalyzer(runner));
+  registry.registerFactory(
+      _metadata('dart', 'DART AUDIT', AnalyzerCategory.dart),
+      () => DartAnalyzer(runner));
+  registry.registerFactory(_metadata('git', 'GIT AUDIT', AnalyzerCategory.git),
+      () => GitAnalyzer(runner));
+  registry.registerFactory(
+      _metadata(
+          'dependencies', 'DEPENDENCY AUDIT', AnalyzerCategory.dependencies),
+      () => DependencyAnalyzer(runner));
+  registry.registerFactory(
+      _metadata(
+          'architecture', 'ARCHITECTURE AUDIT', AnalyzerCategory.architecture),
+      () => ArchitectureAnalyzer(scanner));
+  registry.registerFactory(
+      _metadata('repository', 'REPOSITORY AUDIT', AnalyzerCategory.repository),
+      () => RepositoryAnalyzer(scanner));
+  registry.registerFactory(
+      _metadata('feature', 'FEATURE AUDIT', AnalyzerCategory.feature),
+      () => FeatureAnalyzer(scanner));
+  registry.registerFactory(
+      _metadata('metrics', 'METRICS AUDIT', AnalyzerCategory.metrics),
+      () => MetricsAnalyzer(scanner));
+  registry.registerFactory(
+      _metadata('security', 'SECURITY AUDIT', AnalyzerCategory.security),
+      () => SecurityAnalyzer(scanner));
+  registry.registerFactory(
+      _metadata(
+          'performance', 'PERFORMANCE AUDIT', AnalyzerCategory.performance),
+      () => PerformanceAnalyzer(scanner));
+  registry.registerFactory(
+      _metadata('quality', 'QUALITY AUDIT', AnalyzerCategory.quality),
+      () => QualityAnalyzer(scanner));
+  registry.registerFactory(
+      _metadata('project-summary', 'PROJECT SUMMARY', AnalyzerCategory.project),
+      () =>
+          SectionAnalyzer('PROJECT SUMMARY', 'Project health audit summary.'));
+  registry.registerFactory(
+      _metadata('recommendations', 'RECOMMENDATIONS',
+          AnalyzerCategory.recommendations),
+      () => SectionAnalyzer('RECOMMENDATIONS',
+          'Recommendations are listed from detected issues.'));
   try {
-    final file = await Doctor(analyzers, ReportBuilder(ScoreCalculator())).run(
-        options.projectPath,
-        outputDirectory: options.outputDirectory,
-        version: '1.0.0',
-        logger: Logger(
-            verbose: options.verbose,
-            quiet: options.quiet,
-            noColor: options.noColor));
+    final file =
+        await Doctor.fromRegistry(registry, ReportBuilder(ScoreCalculator()))
+            .run(options.projectPath,
+                outputDirectory: options.outputDirectory,
+                version: '1.0.0',
+                logger: Logger(
+                    verbose: options.verbose,
+                    quiet: options.quiet,
+                    noColor: options.noColor));
     if (!options.quiet) stdout.writeln(file.path);
   } catch (error) {
     stderr.writeln('[ERROR] Unable to create report: $error');
     exitCode = 1;
   }
 }
+
+AnalyzerMetadata _metadata(
+        String id, String displayName, AnalyzerCategory category) =>
+    AnalyzerMetadata(
+      id: id,
+      displayName: displayName,
+      description: '$displayName project health checks.',
+      category: category,
+      supportedProjectTypes: const [ProjectType.dart, ProjectType.flutter],
+    );
 
 /// Adds the project metadata section used by the CLI's analyzer list.
 class ProjectAnalyzer extends SectionAnalyzer {

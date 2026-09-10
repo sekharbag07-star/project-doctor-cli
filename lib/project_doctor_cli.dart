@@ -3,6 +3,9 @@
 export 'src/doctor.dart';
 export 'src/analyzers/analyzer.dart';
 export 'src/analyzers/analyzer_result.dart';
+export 'src/analyzers/analyzer_metadata.dart';
+export 'src/analyzers/analyzer_registry.dart';
+export 'src/analyzers/analyzer_plugin.dart';
 export 'src/analyzers/issue.dart';
 export 'src/core/project_context.dart';
 export 'src/core/cli_options.dart';
