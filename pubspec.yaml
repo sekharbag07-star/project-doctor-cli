@@ -1,0 +1,9 @@
+name: project_doctor_cli
+description: Enterprise health auditing for Dart and Flutter projects.
+version: 1.0.0
+publish_to: none
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.0.0

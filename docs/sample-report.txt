@@ -1,0 +1,7 @@
+PROJECT DOCTOR REPORT
+Tool version: 1.0.0
+Execution timestamp: 2026-01-01T00:00:00.000Z
+Project path: /example/project
+Total execution time: 12 ms
+
+This placeholder is intentionally text-only because the CLI produces text reports.

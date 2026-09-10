@@ -1,0 +1,41 @@
+# ------------------------------
+# Dart / Flutter
+# ------------------------------
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Generated reports
+reports/
+
+# Coverage
+coverage/
+
+# API Documentation
+doc/api/
+
+# IDE
+.idea/
+.vscode/
+
+# VS Code workspace
+*.code-workspace
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Generated verification reports
+verification_reports/
